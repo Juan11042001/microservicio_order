@@ -11,6 +11,9 @@ export class OrdersController {
   @MessagePattern('createOrder')
   create(@Payload() createOrderDto: CreateOrderDto) {
     return this.ordersService.create(createOrderDto);
+    // const order = this.ordersService.create(createOrderDto);
+    // const orderPayment = this.client.send('createOrderPayment', order);
+    // return orderPayment;
   }
 
   @MessagePattern('findAllOrders')
@@ -33,4 +36,3 @@ export class OrdersController {
     return this.ordersService.remove(id);
   }
 }
-

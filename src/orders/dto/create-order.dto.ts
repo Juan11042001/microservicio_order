@@ -11,8 +11,8 @@ export class OrderDetailDto {
 }
 
 export class CreateOrderDto {
-  @IsString()
-  eventId: string;
+  // @IsString()
+  // eventId: string;
 
   @IsString()
   userId: string;
