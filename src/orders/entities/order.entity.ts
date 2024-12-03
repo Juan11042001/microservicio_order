@@ -1,41 +1,33 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { OrderDetail } from './order-detail.entity';
 
-@Entity('orders')
+@Entity()
 export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column()
+  eventId: string;
+
+  @Column()
+  userId: string;
+
   @Column('decimal', { precision: 10, scale: 2 })
   totalAmount: number;
 
-  @Column({ default: 'pending' })
+  @Column()
   status: string;
 
-  @Column({ default: false })
+  @Column()
   paid: boolean;
 
-  @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.order, {
-    cascade: true,
-    eager: true
-  })
+  @Column()
+  eventName: string;
+
+  @Column()
+  eventDate: Date;
+
+  @OneToMany(() => OrderDetail, orderDetail => orderDetail.order, { cascade: true })
   orderDetails: OrderDetail[];
-}
-
-@Entity('order_details')
-export class OrderDetail {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column()
-  productId: string;
-
-  @Column('decimal', { precision: 10, scale: 2 })
-  price: number;
-
-  @Column()
-  quantity: number;
-
-  @ManyToOne(() => Order, (order) => order.orderDetails)
-  order: Order;
 }
 

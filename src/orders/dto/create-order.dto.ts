@@ -1,18 +1,22 @@
-import { IsArray, IsNumber, IsString, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsArray, ValidateNested, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class OrderDetailDto {
   @IsString()
-  productId: string;
+  ticketTypeId: string;
 
   @IsNumber()
-  price: number;
-
-  @IsNumber()
+  @Min(1)
   quantity: number;
 }
 
 export class CreateOrderDto {
+  @IsString()
+  eventId: string;
+
+  @IsString()
+  userId: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderDetailDto)
