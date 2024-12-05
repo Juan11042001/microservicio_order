@@ -8,8 +8,6 @@ export class Order {
 
   @CreateDateColumn()
   createdAt: Date;
-  // @Column()
-  // eventId: string;
 
   @Column()
   userId: string;
@@ -17,20 +15,19 @@ export class Order {
   @Column('decimal', { precision: 10, scale: 2 })
   totalAmount: number;
 
-  @Column() //pending| completed| canceled
-  status: string;
+  @Column({
+    type: 'enum',
+    enum: ['pending', 'completed', 'canceled'],
+    default: 'pending'
+  })
+  status: 'pending' | 'completed' | 'canceled';
 
   @Column({ default: false })
   paid: boolean;
-
-  // @Column()
-  // eventName: string;
-
-  // @Column()
-  // eventDate: Date;
 
   @OneToMany(() => OrderDetail, (orderDetail) => orderDetail.order, {
     cascade: true,
   })
   orderDetails: OrderDetail[];
 }
+

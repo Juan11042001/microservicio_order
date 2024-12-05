@@ -24,98 +24,100 @@ export class OrdersService {
 
   async create(createOrderDto: CreateOrderDto) {
     try {
-      // Intentar obtener información del evento con un timeout
-      const eventInfo = await this.getEventInfo(createOrderDto.eventId);
+      const ticketTypes = await this.getTicketTypes(createOrderDto.orderDetails.map(detail => detail.ticketTypeId));
       
-      // Crear la orden incluso si no podemos obtener toda la información del evento
+      let totalAmount = 0;
+      const orderDetails = createOrderDto.orderDetails.map(detail => {
+        const ticketType = ticketTypes.find(tt => tt.id === detail.ticketTypeId);
+        if (!ticketType) {
+          throw new Error(`Ticket type ${detail.ticketTypeId} not found`);
+        }
+        totalAmount += ticketType.price * detail.quantity;
+        return {
+          ticketTypeId: detail.ticketTypeId,
+          quantity: detail.quantity,
+          price: ticketType.price,
+          ticketTypeName: ticketType.name
+        };
+      });
+
       const order = this.orderRepository.create({
-        eventId: createOrderDto.eventId,
         userId: createOrderDto.userId,
+        totalAmount,
         status: 'pending',
         paid: false,
-        eventName: eventInfo?.name || 'Event name pending',
-        eventDate: eventInfo?.startDate || new Date(),
-        totalAmount: 0 // Se calculará basado en los detalles
+        orderDetails
       });
 
       const savedOrder = await this.orderRepository.save(order);
 
-      // Crear los detalles de la orden
-      let totalAmount = 0;
-      const orderDetails = [];
+      await this.reserveTickets(createOrderDto);
 
-      for (const detail of createOrderDto.orderDetails) {
-        const orderDetail = this.orderDetailRepository.create({
-          order: savedOrder,
-          ticketTypeId: detail.ticketTypeId,
-          quantity: detail.quantity,
-          price: 0, // Precio por defecto si no podemos obtener el precio real
-          ticketTypeName: 'Ticket pending confirmation'
-        });
-
-        // Intentar obtener información del tipo de ticket
-        try {
-          const ticketType = await firstValueFrom(
-            this.client.send('findTicketType', { 
-              eventId: createOrderDto.eventId,
-              ticketTypeId: detail.ticketTypeId 
-            }).pipe(
-              timeout(5000),
-              catchError(() => of(null))
-            )
-          );
-
-          if (ticketType) {
-            orderDetail.price = ticketType.price;
-            orderDetail.ticketTypeName = ticketType.name;
-            totalAmount += ticketType.price * detail.quantity;
-          }
-        } catch (error) {
-          this.logger.warn(`Could not get ticket type information for ${detail.ticketTypeId}`);
-        }
-
-        orderDetails.push(await this.orderDetailRepository.save(orderDetail));
-      }
-
-      // Actualizar el monto total de la orden
-      savedOrder.totalAmount = totalAmount;
-      await this.orderRepository.save(savedOrder);
-
-      // Intentar reservar los tickets
-      try {
-        await firstValueFrom(
-          this.client.send('reserveTickets', createOrderDto).pipe(
-            timeout(5000),
-            catchError(() => of(null))
-          )
-        );
-      } catch (error) {
-        this.logger.warn('Could not reserve tickets immediately, will need manual confirmation');
-      }
-
-      return {
-        ...savedOrder,
-        orderDetails
-      };
+      return savedOrder;
     } catch (error) {
       this.logger.error(`Error creating order: ${error.message}`);
       throw error;
     }
   }
 
-  private async getEventInfo(eventId: string) {
+  async createPaymentSession(order: Order) {
     try {
       return await firstValueFrom(
-        this.client.send('findOneEvent', eventId).pipe(
+        this.client.send('create.payment.session', {
+          orderId: order.id,
+          currency: 'usd',
+          items: order.orderDetails.map(item => ({
+            name: item.ticketTypeName,
+            price: item.price,
+            quantity: item.quantity,
+          })),
+        }).pipe(
           timeout(5000),
-          catchError(() => of(null))
+          catchError(() => {
+            this.logger.warn('Could not create payment session, using default values');
+            return of({ url: 'https://example.com/payment' });
+          })
         )
       );
     } catch (error) {
-      this.logger.warn(`Could not get event information for ${eventId}`);
-      return null;
+      this.logger.warn(`Could not create payment session: ${error.message}`);
+      return { url: 'https://example.com/payment' };
     }
   }
+
+  private async getTicketTypes(ticketTypeIds: string[]) {
+    try {
+      return await firstValueFrom(
+        this.client.send('findTicketTypes', ticketTypeIds).pipe(
+          timeout(5000),
+          catchError(() => {
+            this.logger.warn('Could not get ticket types, using default values');
+            return of(ticketTypeIds.map(id => ({ id, name: 'Unknown', price: 0 })));
+          })
+        )
+      );
+    } catch (error) {
+      this.logger.warn(`Could not get ticket types: ${error.message}`);
+      return ticketTypeIds.map(id => ({ id, name: 'Unknown', price: 0 }));
+    }
+  }
+
+  private async reserveTickets(createOrderDto: CreateOrderDto) {
+    try {
+      await firstValueFrom(
+        this.client.send('reserveTickets', createOrderDto).pipe(
+          timeout(5000),
+          catchError(() => {
+            this.logger.warn('Could not reserve tickets immediately, will need manual confirmation');
+            return of(null);
+          })
+        )
+      );
+    } catch (error) {
+      this.logger.warn('Could not reserve tickets immediately, will need manual confirmation');
+    }
+  }
+
 
   async findAll() {
     return await this.orderRepository.find({
