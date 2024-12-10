@@ -10,37 +10,9 @@ export class OrdersController {
 
   @MessagePattern('createOrder')
   async create(@Payload() createOrderDto: CreateOrderDto) {
-    try {
-      const order = await this.ordersService.create(createOrderDto);
-      const orderPayment = await this.ordersService.createPaymentSession(order);
-
-      return {
-        order: {
-          id: order.id,
-          userId: order.userId,
-          totalAmount: order.totalAmount,
-          status: order.status,
-          paid: order.paid,
-          createdAt: order.createdAt,
-          orderDetails: order.orderDetails.map(detail => ({
-            ticketTypeId: detail.ticketTypeId,
-            quantity: detail.quantity,
-            price: detail.price,
-            ticketTypeName: detail.ticketTypeName
-          }))
-        },
-        orderPayment: {
-          url: orderPayment.url
-        }
-      };
-    } catch (error) {
-      console.error('Microservice Error:', error);
-      return {
-        error: true,
-        statusCode: 400,
-        message: error.message || 'Failed to create order',
-      };
-    }
+    const order = await this.ordersService.create(createOrderDto);
+    const paymentSession = await this.ordersService.createPaymentSession(order);
+    return paymentSession;
   }
 
   @MessagePattern('findAllOrders')
@@ -57,7 +29,10 @@ export class OrdersController {
 
   @MessagePattern('updateOrder')
   async update(@Payload() updateOrderDto: UpdateOrderDto) {
-    const order = await this.ordersService.update(updateOrderDto.id, updateOrderDto);
+    const order = await this.ordersService.update(
+      updateOrderDto.id,
+      updateOrderDto,
+    );
     return order;
   }
 
@@ -67,4 +42,3 @@ export class OrdersController {
     return result;
   }
 }
-

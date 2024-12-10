@@ -19,7 +19,7 @@ const envsSchema = joi
     DB_PORT: joi.number().required(),
     DB_USER: joi.string().required(),
     DB_PASSWORD: joi.string().required(),
-    DB_NAME_ORDERS: joi.string().required(),
+    DB_NAME: joi.string().required(),
   })
   .unknown(true);
 
@@ -40,6 +40,6 @@ export const envs: EnvsSchema = {
   DB_PORT: value.DB_PORT,
   DB_USERNAME: value.DB_USER,
   DB_PASSWORD: value.DB_PASSWORD,
-  DB_NAME: value.DB_NAME_ORDERS,
+  DB_NAME: value.DB_NAME,
 };
 

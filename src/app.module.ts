@@ -14,6 +14,7 @@ import { envs } from './config/envs';
       database: envs.DB_NAME,
       autoLoadEntities: true,
       synchronize: true, // Set to false in production
+      // dropSchema:true
     }),
     OrdersModule,
   ],
