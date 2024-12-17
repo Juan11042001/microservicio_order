@@ -20,10 +20,11 @@ export class OrdersService {
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
+    
     const ticketTypes = await firstValueFrom(
       this.client.send('validateTicketTypes', createOrderDto.orderDetails),
     );
-
+    
     const totalAmount = createOrderDto.orderDetails.reduce(
       (acc, ticketType) => {
         const price = ticketTypes.find(
@@ -36,7 +37,7 @@ export class OrdersService {
     );
 
     const order = this.orderRepository.create({
-      userId: '503442c1-31ac-4a04-be24-32ce6a734428',
+      userId: createOrderDto.userId,
       totalAmount,
       orderDetails: ticketTypes.map((ticketType) => ({
         ticketTypeId: ticketType.id,
@@ -83,9 +84,16 @@ export class OrdersService {
     return order;
   }
 
-  async update(id: string, updateOrderDto: UpdateOrderDto) {
+  async payOrder(id: string) {
     const order = await this.findOne(id);
-    Object.assign(order, updateOrderDto);
+    order.status = 'completed';
+    order.paid = true;
+    return await this.orderRepository.save(order);
+  }
+
+  async cancelOrder(id: string) {
+    const order = await this.findOne(id);
+    order.status = 'canceled';
     return await this.orderRepository.save(order);
   }
 

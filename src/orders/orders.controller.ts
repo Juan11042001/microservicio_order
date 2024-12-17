@@ -27,12 +27,15 @@ export class OrdersController {
     return order;
   }
 
-  @MessagePattern('updateOrder')
-  async update(@Payload() updateOrderDto: UpdateOrderDto) {
-    const order = await this.ordersService.update(
-      updateOrderDto.id,
-      updateOrderDto,
-    );
+  @MessagePattern('payOrder')
+  async payOrder(@Payload() orderId: string) {
+    const order = await this.ordersService.payOrder(orderId);
+    return order;
+  }
+
+  @MessagePattern('cancelOrder')
+  async cancelOrder(@Payload() orderId: string) {
+    const order = await this.ordersService.payOrder(orderId);
     return order;
   }
 
