@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, Logger, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './entities/order.entity';
@@ -111,8 +111,14 @@ export class OrdersService {
       where: { id },
       relations: ['orderDetails'],
     });
-    if (!order) throw new NotFoundException(`Order with ID ${id} not found`);
-    return order;
+    const ticketType = await firstValueFrom(
+      this.client.send(
+        'findOneTicketType',
+        order.orderDetails[0].ticketTypeId,
+      ),
+    );
+    if (!order) throw new RpcException({status: HttpStatus.NOT_FOUND, message: 'Order not found'});
+    return {...order, ticketType};
   }
 
   async payOrder(id: string) {
@@ -133,4 +139,5 @@ export class OrdersService {
     await this.orderRepository.remove(order);
     return { id };
   }
+
 }

@@ -5,6 +5,7 @@ import { OrdersController } from './orders.controller';
 import { Order } from './entities/order.entity';
 import { OrderDetail } from './entities/order-detail.entity';
 import { NatsModule } from '../nats/nats.module';
+import { TicketsService } from './tickets.service';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { NatsModule } from '../nats/nats.module';
     NatsModule
   ],
   controllers: [OrdersController],
-  providers: [OrdersService],
+  providers: [OrdersService, TicketsService],
 })
 export class OrdersModule {}
 

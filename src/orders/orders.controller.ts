@@ -1,12 +1,17 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Res } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { TicketsService } from './tickets.service';
+import { Response } from 'express';
 
 @Controller()
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly ticketsService: TicketsService
+  ) {}
 
   @MessagePattern('createOrder')
   async create(@Payload() createOrderDto: CreateOrderDto) {
@@ -51,4 +56,21 @@ export class OrdersController {
     const result = await this.ordersService.remove(id);
     return result;
   }
+
+  @MessagePattern('generateTickets')
+  async generateTickets(@Res() res: Response, @Payload() orderId : string) {
+    const pdfDoc = await this.ticketsService.generateTickets(orderId);
+
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      
+      pdfDoc.on('data', (chunk) => chunks.push(chunk));
+      pdfDoc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        resolve(pdfBuffer);
+      });
+      
+      pdfDoc.end();
+    });
+  } 
 }
