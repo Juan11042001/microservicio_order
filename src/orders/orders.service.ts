@@ -20,18 +20,17 @@ export class OrdersService {
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
-    
     const ticketTypes = await firstValueFrom(
       this.client.send('validateTicketTypes', createOrderDto.orderDetails),
     );
-    
+
     const totalAmount = createOrderDto.orderDetails.reduce(
       (acc, ticketType) => {
         const price = ticketTypes.find(
           (item) => item.id === ticketType.ticketTypeId,
         ).price;
         const priceCalculated = price * ticketType.quantity;
-        return acc+priceCalculated;
+        return acc + priceCalculated;
       },
       0,
     );
@@ -73,6 +72,38 @@ export class OrdersService {
     return await this.orderRepository.find({
       relations: ['orderDetails'],
     });
+  }
+
+  async findByUser(userId: string) {
+    const orders = await this.orderRepository.find({
+      where: { userId, paid: true },
+      relations: {
+        orderDetails: true,
+      },
+    });
+    const returnedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const ticketType = await firstValueFrom(
+          this.client.send(
+            'findOneTicketType',
+            order.orderDetails[0].ticketTypeId,
+          ),
+        );
+        return { ...order, ticketType };
+      }) 
+    )
+    // orders.forEach(async (order) => {
+    //   const ticketType = await firstValueFrom(
+    //     this.client.send(
+    //       'findOneTicketType',
+    //       order.orderDetails[0].ticketTypeId,
+    //     ),
+    //   );
+    //   console.log(ticketType);
+
+    //   return { ...order, ticketType };
+    // });
+    return returnedOrders;
   }
 
   async findOne(id: string) {

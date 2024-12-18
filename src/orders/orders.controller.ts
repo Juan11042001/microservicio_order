@@ -21,6 +21,13 @@ export class OrdersController {
     return orders;
   }
 
+  @MessagePattern('findOrdersByUser')
+  async findOrdersByUser(@Payload() userId: string) {
+    
+    const orders = await this.ordersService.findByUser(userId);
+    return orders;
+  }
+
   @MessagePattern('findOneOrder')
   async findOne(@Payload() id: string) {
     const order = await this.ordersService.findOne(id);
